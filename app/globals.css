@@ -36,8 +36,8 @@ code { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 
 .wizard-shell { max-width: 1096px; min-height: 100svh; display: flex; flex-direction: column; margin: auto; padding: 0 28px; }
 .mast { display: flex; align-items: center; justify-content: space-between; min-height: 70px; border-bottom: 1px solid var(--line); gap: 20px; }
-.wordmark { display: flex; align-items: center; gap: 10px; font: 600 24px/1 Georgia, serif; letter-spacing: -1.2px; }
-.mast-caption { font: italic 14px Georgia, serif; color: var(--muted); }
+.wordmark { display: flex; align-items: center; gap: 10px; font-size: 24px; line-height: 1; font-weight: 650; letter-spacing: -.8px; }
+.mast-caption { font-size: 14px; color: var(--muted); }
 .stepper { width: min(100%, 800px); margin: 28px auto; }
 .stepper ol { padding: 0; margin: 0; list-style: none; display: flex; align-items: center; }
 .stepper li { display: flex; align-items: center; flex: 1; min-width: 0; }
@@ -55,7 +55,7 @@ code { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 .stage-heading { margin-bottom: 20px; }
 .eyebrow { color: var(--accent); font: 650 11px/1.5 ui-monospace, monospace; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 6px; }
 .eyebrow span { color: #92849f; padding: 0 1px; }
-.stage-heading h1 { font: 500 clamp(32px, 4.2vw, 46px)/1.12 Georgia, "Times New Roman", serif; letter-spacing: -.047em; text-wrap: balance; }
+.stage-heading h1 { font-size: clamp(32px, 4.2vw, 46px); line-height: 1.12; font-weight: 600; letter-spacing: -.035em; text-wrap: balance; }
 .stage-heading > p:last-child { color: var(--muted); font-size: 15px; margin: 8px 0 0; }
 .feedback:not(:empty) { font-size: 13px; color: #395b4c; padding: 11px 14px; border-radius: 7px; background: #edf5f0; margin-bottom: 16px; }
 .wizard-card { border: 1px solid var(--line); background: white; border-radius: 15px; padding: 22px; box-shadow: 0 5px 20px -15px #503c693d; }
