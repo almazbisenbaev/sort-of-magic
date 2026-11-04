@@ -2,9 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { parseCsv } from '../lib/csv';
 import { detectRepairs } from '../lib/detectors';
 import { applyPatch } from '../lib/patches';
-import { automaticIssueCount, buildCellStates } from '../lib/presentation';
+import { automaticIssueCount, buildCellStates, summarizeChanges } from '../lib/presentation';
 
 describe('repair presentation', () => {
+  it('summarizes net changes without counting deleted cells or reverted edits', () => {
+    const original = parseCsv('name,code\n" Alice ",001\n" Alice ",001', 'x.csv');
+    const trimmed = applyPatch(original, detectRepairs(original)[0]).dataset;
+    const deduped = applyPatch(trimmed, detectRepairs(trimmed)[0]).dataset;
+    expect(summarizeChanges(original, deduped)).toEqual({ editedCells: 1, removedRows: 1, renamedColumns: 0 });
+    expect(summarizeChanges(original, original)).toEqual({ editedCells: 0, removedRows: 0, renamedColumns: 0 });
+  });
   it('prioritizes proposed cells and marks every cell of a removed row', () => {
     const data = parseCsv('name,code\n" Alice ",001\n" Alice ",001', 'x.csv');
     const repairs = detectRepairs(data);

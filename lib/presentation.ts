@@ -23,3 +23,17 @@ export function buildCellStates(data: Dataset, repairs: RepairPatch[], preview: 
   };
 }
 export function automaticIssueCount(repairs: RepairPatch[]) { return repairs.reduce((n, p) => n + p.edits.length + p.removedRows.length, 0); }
+
+export function summarizeChanges(original: Dataset, current: Dataset) {
+  const before = new Map(original.rows.map(row => [row.id, row]));
+  const names = new Map(original.columns.map(column => [column.id, column.name]));
+  let editedCells = 0;
+  for (const row of current.rows) for (const column of current.columns) {
+    if (before.get(row.id)?.values[column.id] !== row.values[column.id]) editedCells++;
+  }
+  return {
+    editedCells,
+    removedRows: original.rows.length - current.rows.length,
+    renamedColumns: current.columns.filter(column => names.get(column.id) !== column.name).length,
+  };
+}

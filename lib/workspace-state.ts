@@ -6,8 +6,8 @@ export const initialWorkspace: WorkspaceState = { data: null, preview: null, his
 export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   try {
     switch (action.type) {
-      case 'load': return { ...initialWorkspace, data: action.data, message: `Loaded ${action.data.name}. ${action.data.rows.length} data rows.` };
-      case 'preview': return { ...state, preview: action.patch, error: '', message: action.patch ? 'Review the exact changes below before applying.' : 'Preview dismissed. Nothing changed.' };
+      case 'load': return { ...initialWorkspace, data: action.data };
+      case 'preview': return { ...state, preview: action.patch, error: '', message: action.patch ? 'Review the exact changes below before applying.' : state.preview ? 'Preview cancelled. Nothing changed.' : '' };
       case 'error': return { ...state, error: action.message, message: '' };
       case 'message': return { ...state, message: action.message, error: '' };
       case 'edit':
@@ -17,7 +17,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         const patch = action.type === 'apply' ? state.preview : { id: 'manual', datasetId: state.data.id, datasetVersion: state.data.version, title: 'Manual cell edit', edits: [{ rowId: action.rowId, columnId: action.columnId, before: action.before, after: action.after }], removedRows: [] };
         if (!patch) return state;
         const result = applyPatch(state.data, patch);
-        return { ...state, data: result.dataset, history: [...state.history, result.undo].slice(-100), preview: null, error: '', message: `Applied: ${patch.title}. Pending suggestions cleared and issues rechecked.` };
+        return { ...state, data: result.dataset, history: [...state.history, result.undo].slice(-100), preview: null, error: '', message: `Applied: ${patch.title}. You can undo this change.` };
       }
       case 'undo': {
         if (!state.data || !state.history.length) return state;

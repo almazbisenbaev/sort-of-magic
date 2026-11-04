@@ -5,7 +5,7 @@ import { buildAiPatch, buildRepairContext } from '@/lib/ai-repairs';
 import { AiResponseSchema, validateSuggestions, type RepairContext, type Suggestions } from '@/lib/schemas';
 
 type Result = { context: RepairContext; suggestions: Suggestions; model: string };
-export default function AiRepairsPanel({ data, disabled, onPreview }: { data: Dataset; disabled: boolean; onPreview: (patch: RepairPatch | null) => void }) {
+export default function AiRepairsPanel({ data, disabled, onPreview, onBusyChange, onPendingChange }: { data: Dataset; disabled: boolean; onPreview: (patch: RepairPatch | null) => void; onBusyChange?: (busy: boolean) => void; onPendingChange?: (pending: boolean) => void }) {
   const [columnId, setColumnId] = useState(data.columns.find(c => /country|category/i.test(c.name))?.id ?? data.columns[0].id);
   const [guidance, setGuidance] = useState('');
   const [configured, setConfigured] = useState<boolean | null>(null);
@@ -14,6 +14,9 @@ export default function AiRepairsPanel({ data, disabled, onPreview }: { data: Da
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const controller = useRef<AbortController | null>(null);
+  useEffect(() => { onBusyChange?.(loading); }, [loading, onBusyChange]);
+  useEffect(() => { onPendingChange?.(selected.length > 0); }, [selected, onPendingChange]);
+  useEffect(() => () => { onBusyChange?.(false); onPendingChange?.(false); }, [onBusyChange, onPendingChange]);
   useEffect(() => {
     const statusController = new AbortController();
     fetch('/api/repairs', { signal: statusController.signal, cache: 'no-store' }).then(r => r.json()).then(r => setConfigured(r.configured === true)).catch(() => {});
@@ -58,31 +61,30 @@ export default function AiRepairsPanel({ data, disabled, onPreview }: { data: Da
     catch (e) { setError(e instanceof Error ? e.message : 'Could not build preview.'); }
   }
   return <section aria-label="Meta AI category repair">
-    <h2>Normalize categories with Meta AI</h2>
-    <p>Choose a column such as country or product category. Meta proposes equivalent labels; you review every change.</p>
-    {configured === false && <p className="notice">AI suggestions are currently unavailable. You can still use all other cleanup tools.</p>}
-    {configured === true && <p className="notice">Meta AI is connected. You choose which suggestions to apply.</p>}
-    <label>Category column{' '}<select aria-label="Category column" value={columnId} disabled={loading || disabled} onChange={e => { setColumnId(e.target.value); setResult(null); setSelected([]); setError(''); onPreview(null); }}>{data.columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-    <p><label>Optional cleanup guidance<br /><textarea aria-label="Optional cleanup guidance" maxLength={1000} rows={2} value={guidance} disabled={loading || disabled} placeholder="For example: keep different product types separate." onChange={e => { setGuidance(e.target.value); setResult(null); setSelected([]); setError(''); onPreview(null); }} /></label></p>
-    <p className="notice">Clicking Analyze sends only this column’s name, distinct nonempty values, their counts, and your optional guidance through the server to the configured Meta provider. Other columns and the filename are not sent. Blank values are excluded.</p>
+    <h2>Choose a column to check</h2>
+    <p>Country names, product categories, and status labels work well. You’ll choose which suggestions to use.</p>
+    {configured === false && <p className="notice-box">AI suggestions are currently unavailable. You can continue to download with the changes you’ve already made.</p>}
+    <div className="ai-input-row"><label>Category column<select aria-label="Category column" value={columnId} disabled={loading || disabled} onChange={e => { setColumnId(e.target.value); setResult(null); setSelected([]); setError(''); onPreview(null); }}>{data.columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+    <button className="primary" disabled={loading || disabled || !contextState.context} onClick={analyze}>{loading ? 'Analyzing…' : error ? 'Retry analysis with Meta' : 'Analyze with Meta'}</button>{loading && <button onClick={cancel}>Cancel analysis</button>}</div>
+    <details className="ai-guidance"><summary>Add instructions (optional)</summary><label><span className="sr-only">Optional cleanup guidance</span><textarea aria-label="Optional cleanup guidance" maxLength={1000} rows={2} value={guidance} disabled={loading || disabled} placeholder="For example: prefer full country names." onChange={e => { setGuidance(e.target.value); setResult(null); setSelected([]); setError(''); onPreview(null); }} /></label></details>
+    <p className="notice">Analyze sends this column’s distinct nonempty values, counts, name, and any instructions to Meta. Other columns and your filename stay in your browser.</p>
     {contextState.error && <p>{contextState.error}</p>}
     {contextState.context && <details><summary>Review data to send ({contextState.context.values.length} distinct values)</summary><div className="table-scroll"><table><thead><tr><th>Value</th><th>Count</th></tr></thead><tbody>{contextState.context.values.map(v => <tr key={v.value}><td><code>{JSON.stringify(v.value)}</code></td><td>{v.count}</td></tr>)}</tbody></table></div></details>}
-    <p className="controls"><button disabled={loading || disabled || !contextState.context} onClick={analyze}>{loading ? 'Analyzing…' : error ? 'Retry analysis with Meta' : 'Analyze with Meta'}</button>{loading && <button onClick={cancel}>Cancel analysis</button>}</p>
-    <p role="status" aria-live="polite">{loading ? 'Waiting for Meta. Your spreadsheet is unchanged.' : result ? `Received ${result.suggestions.mappings.length} proposed mappings from ${result.model}. Nothing has been applied.` : ''}</p>
+    <p role="status" aria-live="polite">{loading ? 'Finding matching labels. Your spreadsheet is unchanged.' : result ? `${result.suggestions.mappings.length} suggestions ready to review. Nothing has been applied.` : ''}</p>
     {error && <p role="alert" className="error">{error}</p>}
     {result && <>
       <h3>Suggested mappings</h3>
-      {!result.suggestions.mappings.length && <p>Meta did not propose any safe mappings. This does not certify the column as correct.</p>}
+      {!result.suggestions.mappings.length && <p>No clear label changes were found. You can try another column or continue to download.</p>}
       {!!result.suggestions.mappings.length && <>
-        <p>Select the mappings you want to preview. Unselected mappings leave values unchanged.</p>
-        <div className="table-scroll"><table><thead><tr><th>Use</th><th>From</th><th>To</th><th>Affected cells</th><th>Explanation</th></tr></thead><tbody>{result.suggestions.mappings.map(m => <tr key={m.from}>
+        <p>Select the suggestions you want, then preview the exact changes.</p>
+        <div className="table-scroll"><table><thead><tr><th>Use</th><th>Current label</th><th>Use instead</th><th>Cells</th><th>Why</th></tr></thead><tbody>{result.suggestions.mappings.map(m => <tr key={m.from}>
           <td><input aria-label={`Use mapping ${m.from} to ${m.to}`} type="checkbox" checked={selected.includes(m.from)} disabled={disabled} onChange={e => { setSelected(e.target.checked ? [...selected, m.from] : selected.filter(v => v !== m.from)); onPreview(null); }} /></td>
           <td><code>{JSON.stringify(m.from)}</code></td><td><code>{JSON.stringify(m.to)}</code></td><td>{result.context.values.find(v => v.value === m.from)?.count}</td><td>{m.reason}</td>
         </tr>)}</tbody></table></div>
-        <button disabled={!selected.length || disabled} onClick={preview}>Preview selected AI repairs</button>
+        <button className="primary" disabled={!selected.length || disabled} onClick={preview}>Preview selected AI repairs</button>
       </>}
       {!!result.suggestions.ambiguities.length && <><h3>Needs your judgment — no changes proposed</h3><ul>{result.suggestions.ambiguities.map((a, i) => <li key={i}><code>{JSON.stringify(a.values)}</code>: {a.reason}</li>)}</ul></>}
-      <p className="notice">AI can make mistakes. Applying a repair or undoing a change clears these suggestions; analyze again against the updated data.</p>
+      <p className="notice">AI can make mistakes. Review suggestions before applying them. Changing your data clears the suggestions so you can check again.</p>
     </>}
   </section>;
 }

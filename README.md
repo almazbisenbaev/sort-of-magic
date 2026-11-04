@@ -1,6 +1,6 @@
 # Sort of Magic
 
-A CSV cleanup app built with Next.js, React, TypeScript, AG Grid Community, and Papa Parse. The app supports editable data, undo history, local cleanup, and Meta-assisted category normalization. The workspace puts suggested fixes first, with optional tools below and the spreadsheet alongside.
+A CSV cleanup app built with Next.js, React, TypeScript, AG Grid Community, and Papa Parse. The app supports editable data, undo history, local cleanup, and Meta-assisted category normalization. A four-step wizard guides users through Upload → Clean up → AI labels → Download. The spreadsheet and advanced tools open only when needed.
 
 Public app: **https://sortofmagic.vercel.app**. Hosting is configured on Vercel; demo recording and hackathon submission materials remain in Phase 5 of the workspace's `PROJECT_BRIEF.md`.
 
@@ -18,13 +18,13 @@ Open http://127.0.0.1:3000. Local cleanup requires no credentials. AI suggestion
 
 ## Try it
 
-1. Click **Try a sample CSV**, or upload a UTF-8, comma-separated `.csv`.
-2. Select **Review** beside **Trim extra spaces** and inspect the exact before/after values.
-3. Click **Apply 6 changes**. The demo goes from 8 issue instances to 2.
-4. Select **Review** beside **Remove exact duplicates**: source records 4 and 8 will be removed; 3 and 7 retained.
-5. Apply the repair: 5 rows remain, with no Phase 1 issues.
-6. Click **Undo last change** to restore both removed rows in place.
-7. Click **Download CSV**.
+1. In **Upload**, choose **Try a sample CSV**, check the column names, and click **Continue to cleanup**.
+2. In **Clean up**, review **Trim extra spaces**, then apply the six changes. Review and remove the two exact duplicate rows; five rows remain.
+3. Click **Continue to AI labels**. Select `country`, optionally add “prefer full country names,” and click **Analyze with Meta**.
+4. Select suggestions, preview the exact changes, then apply them. **Undo last change** restores the prior data without leaving the step.
+5. Click **Continue to download**. Review the net change counts and click **Download CSV**.
+
+AI and individual fixes are optional. You can go back to visited steps without losing applied changes. The wizard blocks navigation during an unapplied preview or an active AI request; apply/cancel the preview or cancel analysis to continue. Selected AI suggestions are preserved when moving between cleanup, AI, and download. Continuing without applying them leaves the CSV unchanged and shows a reminder on the download step.
 
 The demo contains synthetic data, including leading-zero IDs, Unicode, embedded newlines, commas, and quoted text.
 
@@ -40,12 +40,12 @@ The demo contains synthetic data, including leading-zero IDs, Unicode, embedded 
 - Values stay strings. CSV export quotes all fields to preserve empty records and special characters. It does not preserve original byte formatting or line endings.
 - Export defaults to prefixing formula-like headers/cells with an apostrophe. This changes downloaded text only and includes negative numbers. The UI shows the count and lets you opt out to preserve exact values.
 - The working file stays in browser memory. Clicking Analyze sends only the selected column name, distinct nonempty values, counts, and optional cleanup guidance through the server to the configured provider. Refreshing loses the session.
-- Repairs and export include the entire file, even when filters hide rows. Export preserves source order. A pending preview triggers a confirmation before exporting without it. An unchanged session uses an `-export.csv` suffix; a session with applied changes uses `-repaired.csv`.
+- Repairs and export include the entire file, even when filters hide rows. Export preserves source order. An unapplied preview blocks step navigation and download until it is applied or cancelled. An unchanged session uses an `-export.csv` suffix; a session with applied changes uses `-repaired.csv`.
 - No XLSX/formulas, currency conversion, accounts, or persistent file storage.
 
 ## Phase 3 tools
 
-Under **Additional cleanup**:
+In **Clean up**, expand **Need to clean up something else?**:
 
 - **Empty rows:** preview and remove rows where every cell is blank or whitespace.
 - **Required fields:** select the columns that must have values. Missing cells are listed by source record and column; correct them manually. Optional blanks are allowed.
@@ -71,7 +71,7 @@ npm run typecheck
 npm run build
 ```
 
-102 tests pass across CSV parsing, import/header handling, date and numeric conventions, key duplicates, missing/empty values, mixed-operation undo, stale previews, AI validation, hosting rate-limit errors, and component behavior. Type checking and the production build pass. Browser checks verified sorted/filtered cell editing, undoing manual and batch edits, explicit date resolution, currency-preserving number previews, choosing a retained key duplicate, corrected-header import, and a real Meta guidance → preview → apply → undo flow. A 5,000-row file was loaded, filtered, edited, and exported; the downloaded file retained every row in source order and only the intended edit.
+108 tests pass across CSV parsing, import/header handling, date and numeric conventions, key duplicates, missing/empty values, mixed-operation undo, stale previews, AI validation, hosting rate-limit errors, wizard navigation, skipping optional work, preserving AI selections, final export, and component behavior. Type checking and the production build pass. Browser checks verified sorted/filtered cell editing, undoing manual and batch edits, explicit date resolution, currency-preserving number previews, choosing a retained key duplicate, corrected-header import, and a real Meta guidance → preview → apply → undo flow. A 5,000-row file was loaded, filtered, edited, and exported; the downloaded file retained every row in source order and only the intended edit.
 
 ## Code map
 
@@ -101,13 +101,13 @@ The adapter uses HTTPS `POST /chat/completions` relative to the base URL and Bea
 
 ### Try AI category repair
 
-1. Open the demo CSV; optionally apply whitespace cleanup first.
-2. Under **Normalize categories with Meta AI**, select `country`.
+1. Open the demo CSV, confirm the columns, and optionally apply whitespace cleanup.
+2. Continue to **AI labels** and select `country`.
 3. Expand **Review data to send** to see the values and counts.
 4. Click **Analyze with Meta**. This makes a real provider call and may use credits.
 5. Select the mappings you agree with. Nothing is selected or applied automatically.
 6. Click **Preview selected AI repairs**, inspect exact cells, then **Apply repair**.
-7. Use **Undo last change** to restore the previous dataset, or export the result.
+7. Use **Undo last change** to restore the previous dataset, or continue to **Download** to export the result.
 
 Canonical labels must already exist in the column. Blank values are never filled; ambiguous values remain unchanged. Requests are limited to 2–100 distinct nonempty values, each at most 200 characters, and a 32 KB request body. Responses are capped at 128 KB and generation at 4,096 completion tokens. Provider calls time out after 45 seconds with no automatic retries. Retry explicitly after checking the error.
 
@@ -146,6 +146,12 @@ vercel --prod
 
 Before sharing a fresh deployment, verify the sample CSV, a real AI suggestion, preview/apply/undo, and CSV download. Test the firewall with invalid `{}` JSON requests so the check does not consume Meta credits. See [Vercel's rate-limit documentation](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting) for scope and current plan limits.
 
-## Repair workspace
+## Guided workflow
 
-Suggested fixes appear first. Review the before/after values, then apply the whole group or cancel. Download is disabled while a preview is pending. Undo restores the last change. Expand **Standardize labels with Meta AI** or **More cleanup tools** when needed. On narrow screens, the fixes appear above the spreadsheet.
+**Upload → Clean up → AI labels → Download** is the main path. Each screen has Back and Continue controls and a numbered progress indicator. Unvisited steps stay unavailable until the preceding screen is reached. Returning to Upload preserves the current dataset; choosing a replacement asks for confirmation, and cancelling its column preview preserves the old data.
+
+The spreadsheet is collapsed by default. Expand **View or edit your spreadsheet** to edit, sort, and filter. The Show button in a repair preview reveals and focuses the affected cell. Editing is disabled while a preview or AI request is active; the final spreadsheet is read-only. The advanced cleanup tools remain available in step 2.
+
+Download reports net cell changes on retained rows and the number of removed rows compared with the confirmed import. Undo updates these counts. Remaining quick-check findings and selected, unapplied AI suggestions are disclosed before export; the wizard does not claim every possible issue has been resolved.
+
+Browser verification covers desktop and a 390-pixel phone layout, a real Meta request with guidance, preview/apply, returning to previous steps, revealing a cell in the spreadsheet, and downloading the exact expected five-row CSV. The initial file retains leading-zero IDs, Unicode, quotes, and embedded newlines through the full flow.
