@@ -1,11 +1,11 @@
 import Papa from 'papaparse';
-import type { Dataset } from './dataset';
+import type { Dataset, ExcelSource } from './dataset';
 
 export const LIMITS = { rows: 5000, columns: 50, bytes: 5 * 1024 * 1024 };
 export const FORMULA_LIKE = /^(?:\s*[=+\-@]|[\t\r\n])/;
 
-export type CsvDraft = { name: string; records: string[][]; width: number };
-export function inspectCsv(text: string, name: string): CsvDraft {
+export type TableDraft = { source?: ExcelSource; name: string; records: string[][]; width: number };
+export function inspectCsv(text: string, name: string): TableDraft {
   if (new TextEncoder().encode(text).length > LIMITS.bytes) throw new Error('File exceeds the 5 MB limit.');
   const input = text.replace(/^\uFEFF/, '');
   if (!input.trim()) throw new Error('This file is empty.');
@@ -18,7 +18,7 @@ export function inspectCsv(text: string, name: string): CsvDraft {
   if (records.length > LIMITS.rows + 1) throw new Error('This phase supports at most 5,000 data rows.');
   return { name, records, width };
 }
-export function importCsv(draft: CsvDraft, firstRowIsHeader: boolean, names: string[]): Dataset {
+export function importCsv(draft: TableDraft, firstRowIsHeader: boolean, names: string[]): Dataset {
   if (names.length !== draft.width || names.some(h => !h.trim())) throw new Error('Every column needs a nonempty header.');
   if (new Set(names.map(h => h.trim())).size !== names.length) throw new Error('Column headers must be unique (ignoring surrounding spaces).');
   const records = firstRowIsHeader ? draft.records.slice(1) : draft.records;
@@ -26,11 +26,11 @@ export function importCsv(draft: CsvDraft, firstRowIsHeader: boolean, names: str
   const columns = names.map((name, i) => ({ id: `c${i}`, name }));
   const rows = records.map((record, i) => {
     const values = record.length === 1 && record[0] === '' ? names.map(() => '') : record;
-    const sourceRow = i + (firstRowIsHeader ? 2 : 1);
+    const sourceRow = i + (draft.source?.firstRow ?? 1) + Number(firstRowIsHeader);
     if (values.length !== names.length) throw new Error(`Record ${sourceRow} has ${values.length} fields; expected ${names.length}. Check delimiters and quoting.`);
     return { id: `r${i}`, sourceRow, values: Object.fromEntries(columns.map((col, j) => [col.id, values[j]])) };
   });
-  return { id: crypto.randomUUID(), name: draft.name, version: 0, columns, rows };
+  return { ...(draft.source ? { source: draft.source } : {}), id: crypto.randomUUID(), name: draft.name, version: 0, columns, rows };
 }
 export function parseCsv(text: string, name: string): Dataset {
   const draft = inspectCsv(text, name);

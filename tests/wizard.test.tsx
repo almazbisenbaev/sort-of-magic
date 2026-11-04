@@ -2,10 +2,12 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import RepairWorkspace from '../components/repair-workspace';
+import { excelSession } from '../lib/excel-client';
 
 // Exercise the real import, repair, AI, and navigation code; the grid renderer is
 // covered in browser checks and does not participate in wizard navigation.
 vi.mock('ag-grid-react', () => ({ AgGridReact: () => null }));
+vi.mock('../lib/excel-client', () => ({ excelSession: vi.fn() }));
 const csv = 'id,country,name\n001,USA," Alice "\n002,United States,Bob\n002,United States,Bob\n003,U.S.,Chen';
 const aiResult = { model: 'test-model', suggestions: { mappings: [{ from: 'USA', to: 'United States', reason: 'Same country.' }], ambiguities: [] } };
 let exported: Blob | undefined;
@@ -106,4 +108,30 @@ it('keeps applied repairs when revisiting upload or cancelling a replacement', a
   click('Continue with this file →');
   expect(screen.queryByRole('button', { name: 'Review Trim surrounding whitespace' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Review Remove exact duplicate rows' })).toBeTruthy();
+});
+
+it('lets users revisit the sheet picker and choose either export format after an Excel import', async () => {
+  const close = vi.fn();
+  const write = vi.fn(async () => new ArrayBuffer(8));
+  vi.mocked(excelSession).mockImplementation(() => ({
+    open: async () => [{ name: 'Sales' }, { name: 'Returns' }, { name: 'Totals', problem: 'Contains formulas.' }],
+    read: async (name, sheetName) => ({ name, records: [['id'],['0017']], width: 1, source: { sheetName, firstRow: 3 } }),
+    write, close,
+  }));
+  render(<RepairWorkspace />);
+  const file = Object.assign(new File(['fixture'], 'store.xlsx'), { arrayBuffer: async () => new ArrayBuffer(8) });
+  fireEvent.change(screen.getByLabelText('Upload spreadsheet'), { target: { files: [file] } });
+  await screen.findByRole('heading', { name: 'Choose your worksheet' });
+  expect((screen.getByRole('button', { name: /Totals/ }) as HTMLButtonElement).disabled).toBe(true);
+  click('Sales'); await screen.findByRole('heading', { name: 'Check your columns' });
+  click('Back'); click('Returns'); await screen.findByRole('heading', { name: 'Check your columns' });
+  click('Continue to cleanup →'); click('Continue to AI labels →'); click('Continue to download →');
+  expect((screen.getByLabelText('Excel (.xlsx)') as HTMLInputElement).checked).toBe(true);
+  click('Download XLSX ↓'); await screen.findByRole('heading', { name: 'Your download has started' });
+  expect(exportName).toBe('store-Returns-export.xlsx');
+  expect(write.mock.calls).toHaveLength(1);
+  fireEvent.click(screen.getByLabelText('CSV', { exact: true }));
+  click('Download CSV ↓');
+  expect(exportName).toBe('store-Returns-export.csv');
+  expect(await readExport()).toBe('"id"\r\n"0017"');
 });

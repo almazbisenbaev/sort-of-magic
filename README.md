@@ -1,6 +1,6 @@
 # Sort of Magic
 
-A CSV cleanup app built with Next.js, React, TypeScript, AG Grid Community, and Papa Parse. The app supports editable data, undo history, local cleanup, and Meta-assisted category normalization. A four-step wizard guides users through Upload → Clean up → AI labels → Download. The spreadsheet and advanced tools open only when needed.
+A browser-based cleanup app for CSV files and Excel worksheets, built with Next.js, React, TypeScript, AG Grid Community, Papa Parse, and SheetJS. The app supports editable data, undo history, local cleanup, and Meta-assisted category normalization. A four-step wizard guides users through Upload → Clean up → AI labels → Download. The spreadsheet and advanced tools open only when needed.
 
 Public app: **https://sortofmagic.vercel.app**. Hosting is configured on Vercel; demo recording and hackathon submission materials remain in Phase 5 of the workspace's `PROJECT_BRIEF.md`.
 
@@ -32,16 +32,17 @@ The demo contains synthetic data, including leading-zero IDs, Unicode, embedded 
 
 - Maximum 5,000 data rows, 50 columns, 5 MB. Confirm and edit column names during upload; names must be nonempty and unique.
 - Choose whether the first record contains headers. Uncheck the option for headerless files to preserve the first data row. You can rename headers later with preview and undo.
-- Comma-separated UTF-8 CSV only; save other encodings/delimiters in this format first.
+- Import a comma-separated UTF-8 CSV or a standard, unencrypted Excel (.xlsx) workbook. Choose one visible tab if the workbook has several. Import uses the occupied table range and the displayed values as text, including values in hidden rows and columns. Formulas, Excel errors, and merged cells must be resolved on a copy of the selected tab first. Hidden worksheets cannot be chosen.
 - Double-click cells to edit, Enter to commit, Escape to cancel. Sort with headers and filter with column inputs or global search. Stable internal IDs keep edits on the correct rows. Global search includes source record numbers.
 - Local checks detect surrounding whitespace and exact duplicate rows. Meta analysis can propose equivalent category labels in one selected column.
 - Exact duplicate removal keeps the first occurrence. Key-based deduplication lets you select key columns and choose the retained record for each group; blank keys are excluded. Non-key differences are shown before removal.
 - Undo history retains the latest 100 changes, including manual edits, header edits, and all repairs. Undo restores exact values and removed rows in position. No redo in this phase.
 - Values stay strings. CSV export quotes all fields to preserve empty records and special characters. It does not preserve original byte formatting or line endings.
-- Export defaults to prefixing formula-like headers/cells with an apostrophe. This changes downloaded text only and includes negative numbers. The UI shows the count and lets you opt out to preserve exact values.
+- Excel export creates a new, single-sheet workbook. All cells are literal text. Other sheets, formatting, charts, and formulas are not carried over. The export format defaults to the input format; either CSV or XLSX is available. Workbook parsing and writing run in a local Web Worker.
+- CSV export defaults to prefixing formula-like headers/cells with an apostrophe. This changes downloaded text only and includes negative numbers. The UI shows the count and lets you opt out to preserve exact values.
 - The working file stays in browser memory. Clicking Analyze sends only the selected column name, distinct nonempty values, counts, and optional cleanup guidance through the server to the configured provider. Refreshing loses the session.
-- Repairs and export include the entire file, even when filters hide rows. Export preserves source order. An unapplied preview blocks step navigation and download until it is applied or cancelled. An unchanged session uses an `-export.csv` suffix; a session with applied changes uses `-repaired.csv`.
-- No XLSX/formulas, currency conversion, accounts, or persistent file storage.
+- Repairs and export include the entire imported table, even when filters hide rows. Export preserves source order. An unapplied preview blocks step navigation and download until it is applied or cancelled. Downloads use `-export` or `-repaired` with the chosen extension and, for workbook inputs, the sheet name.
+- No formula evaluation, currency conversion, accounts, or persistent file storage.
 
 ## Phase 3 tools
 
@@ -58,6 +59,7 @@ AI analysis accepts optional cleanup guidance (maximum 1,000 characters), such a
 
 ### Test files
 
+- [Excel workbook](public/demo/messy-workbook.xlsx): two usable sheets and a formula sheet; Orders starts at B3 and includes formatted IDs, dates, whitespace, and a duplicate.
 - [Phase 3 messy data](../test-data/phase-3-messy.csv): ambiguous/invalid dates, mixed number formats, currencies, conflicting duplicate keys, an empty row, and a missing customer.
 - [Headers to fix](../test-data/headers-to-fix.csv): one blank and one duplicate header.
 - [5,000-row sample](../test-data/5000-orders.csv): scale and filtering checks.
@@ -71,12 +73,13 @@ npm run typecheck
 npm run build
 ```
 
-108 tests pass across CSV parsing, import/header handling, date and numeric conventions, key duplicates, missing/empty values, mixed-operation undo, stale previews, AI validation, hosting rate-limit errors, wizard navigation, skipping optional work, preserving AI selections, final export, and component behavior. Type checking and the production build pass. Browser checks verified sorted/filtered cell editing, undoing manual and batch edits, explicit date resolution, currency-preserving number previews, choosing a retained key duplicate, corrected-header import, and a real Meta guidance → preview → apply → undo flow. A 5,000-row file was loaded, filtered, edited, and exported; the downloaded file retained every row in source order and only the intended edit.
+Tests cover Excel worksheet selection, formatted text and safe exports, file limits, CSV parsing, import/header handling, date and numeric conventions, key duplicates, missing/empty values, mixed-operation undo, stale previews, AI validation, hosting rate-limit errors, wizard navigation, skipping optional work, preserving AI selections, final export, and component behavior. Type checking and the production build pass. Browser checks verified sorted/filtered cell editing, undoing manual and batch edits, explicit date resolution, currency-preserving number previews, choosing a retained key duplicate, corrected-header import, and a real Meta guidance → preview → apply → undo flow. A 5,000-row file was loaded, filtered, edited, and exported; the downloaded file retained every row in source order and only the intended edit.
 
 ## Code map
 
 - `components/repair-workspace.tsx`: interface and state transitions.
-- `lib/csv.ts`: parsing, limits, and export.
+- `lib/csv.ts`: parsing, shared table import, limits, and CSV export.
+- `lib/excel.ts`, `lib/excel-client.ts`, `lib/excel-worker.ts`: workbook validation, worksheet selection, and Excel export. The parser is loaded on demand from the app’s own assets.
 - `lib/detectors.ts`: whitespace and exact duplicate detection.
 - `lib/patches.ts`: atomic patch validation/application and undo.
 - `lib/dataset.ts`: shared data types.

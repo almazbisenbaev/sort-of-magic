@@ -11,7 +11,7 @@ export default function RepairPreview({ data, patch, disabled, apply, cancel, lo
   ];
   const pages = Math.max(1, Math.ceil(changes.length / 5));
   return <section aria-label="Repair preview"><div className="review-header"><span className="badge badge-proposed">Preview · Not applied</span><h2>{patch.title}</h2></div>
-    <p>{changes.length} changes across the file. Apply to update your spreadsheet, or cancel to keep it as it is.</p>
+    <p>{changes.length} {changes.length === 1 ? 'change' : 'changes'} in this table. Apply to update your spreadsheet, or cancel to keep it as it is.</p>
     {!!patch.removedRows.some(r => r.kind === 'key') && <p className="warning">Key duplicates may contain different values. Check the retained record before discarding the others.</p>}
     <div className="controls review-actions"><button className="primary" disabled={disabled} onClick={apply}>Apply {changes.length} {changes.length === 1 ? 'change' : 'changes'}</button><button disabled={disabled} onClick={cancel}>Cancel preview</button></div>
     <ol className="diff-list">{changes.slice(page * 5, (page + 1) * 5).map((c, i) => <li className="diff-card" key={i}><div className="diff-location"><strong>{c.location}</strong>{c.rowId && locate && <button className="text-button" onClick={() => locate(c.rowId!, c.columnId)} aria-label={`Show ${c.location.toLowerCase()} in spreadsheet`}>Show ↗</button>}</div><div className="diff-value diff-before"><span>Before</span><code>{c.before}</code></div><div className="diff-value diff-after"><span>After</span><code>{c.after}</code></div></li>)}</ol>
