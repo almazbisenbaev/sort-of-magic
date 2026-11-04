@@ -223,3 +223,13 @@ button.primary:not(:disabled):active { transform: translateY(1px); box-shadow: n
 @media (min-width: 601px) and (max-height: 760px) {
   .mast { min-height: 64px; }.stepper { margin: 18px auto; }.stage-heading h1 { font-size: 40px; }
 }
+
+.waiting-cat {
+  display: inline-block;
+  margin-right: 12px;
+  border-radius: 10px;
+  vertical-align: middle;
+}
+@media (prefers-reduced-motion: reduce) {
+  .waiting-cat { display: none; }
+}

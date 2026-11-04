@@ -1,4 +1,5 @@
 'use client';
+import WaitingCat from './waiting-cat';
 
 import { useMemo, useReducer, useState, useRef, useEffect, type ChangeEvent, type DragEvent } from 'react';
 import { AgGridReact } from 'ag-grid-react';
@@ -200,7 +201,7 @@ export default function RepairWorkspace() {
     </li>)}</ol></nav>
     <main className="wizard-content">
       <header key={title} className="stage-heading"><p className="eyebrow">Step {String(step + 1).padStart(2, '0')} <span>/</span> 04</p><h1 tabIndex={-1} ref={heading}>{title}</h1><p>{subtitle}</p></header>
-      <div className="feedback" role="status" aria-live="polite">{exporting ? 'Preparing your download…' : busy ? 'Reading your file…' : state.message}</div>
+      <div className="feedback" role="status" aria-live="polite">{(busy || exporting) && <WaitingCat />}{exporting ? 'Preparing your download…' : busy ? 'Reading your file…' : state.message}</div>
       {state.error && <p role="alert" className="error">{state.error}</p>}
       {step === 0 && (draft ? <ImportPreview key={draft.name + draft.records.length} draft={draft} onCancel={cancelImport} onImport={loadData} /> : workbook ? <SheetPicker name={workbook.name} sheets={workbook.sheets} busy={busy} onSelect={chooseSheet} onCancel={cancelImport} /> : <section className="upload-stage" aria-label="Choose your file">
         {data && <div className="resume-card"><div><strong>{data.name}</strong><p>Your changes are still here.</p></div><button onClick={() => goTo(1)}>Continue with this file →</button></div>}

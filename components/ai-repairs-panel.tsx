@@ -1,4 +1,5 @@
 'use client';
+import WaitingCat from './waiting-cat';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dataset, RepairPatch } from '@/lib/dataset';
 import { buildAiPatch, buildRepairContext } from '@/lib/ai-repairs';
@@ -70,7 +71,7 @@ export default function AiRepairsPanel({ data, disabled, onPreview, onBusyChange
     <p className="notice">Analyze sends this column’s distinct nonempty values, counts, name, and any instructions to Meta. Other columns and your filename stay in your browser.</p>
     {contextState.error && <p>{contextState.error}</p>}
     {contextState.context && <details><summary>Review data to send ({contextState.context.values.length} distinct values)</summary><div className="table-scroll"><table><thead><tr><th>Value</th><th>Count</th></tr></thead><tbody>{contextState.context.values.map(v => <tr key={v.value}><td><code>{JSON.stringify(v.value)}</code></td><td>{v.count}</td></tr>)}</tbody></table></div></details>}
-    <p role="status" aria-live="polite">{loading ? 'Finding matching labels. Your spreadsheet is unchanged.' : result ? `${result.suggestions.mappings.length} suggestions ready to review. Nothing has been applied.` : ''}</p>
+    <p role="status" aria-live="polite">{(loading) && <WaitingCat />}{loading ? 'Finding matching labels. Your spreadsheet is unchanged.' : result ? `${result.suggestions.mappings.length} suggestions ready to review. Nothing has been applied.` : ''}</p>
     {error && <p role="alert" className="error">{error}</p>}
     {result && <>
       <h3>Suggested mappings</h3>
