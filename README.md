@@ -158,3 +158,7 @@ The spreadsheet is collapsed by default. Expand **View or edit your spreadsheet*
 Download reports net cell changes on retained rows and the number of removed rows compared with the confirmed import. Undo updates these counts. Remaining quick-check findings and selected, unapplied AI suggestions are disclosed before export; the wizard does not claim every possible issue has been resolved.
 
 Browser verification covers desktop and a 390-pixel phone layout, a real Meta request with guidance, preview/apply, returning to previous steps, revealing a cell in the spreadsheet, and downloading the exact expected five-row CSV. The initial file retains leading-zero IDs, Unicode, quotes, and embedded newlines through the full flow.
+
+## License
+
+The original Sort of Magic code is available under the [MIT License](LICENSE). Third-party dependencies retain their own licenses. The jumping cat GIF is excluded from this license.
