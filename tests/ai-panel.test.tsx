@@ -39,6 +39,15 @@ it('clears prior results on column changes', async () => {
   expect(screen.queryByText('Suggested mappings')).toBeNull();
   expect(preview.mock.calls.at(-1)?.[0]).toBeNull();
 });
+it('handles a hosting rate limit without requiring JSON or changing the spreadsheet', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json({ configured: true })).mockResolvedValueOnce(new Response('<html>Too many requests</html>', { status: 429 })));
+  const preview = vi.fn();
+  render(<AiRepairsPanel data={data()} disabled={false} onPreview={preview} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Analyze with Meta' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('Wait a minute');
+  expect(screen.getByRole('button', { name: 'Retry analysis with Meta' })).toBeTruthy();
+  expect(preview.mock.calls.every(call => call[0] === null)).toBe(true);
+});
 it('cancels an in-flight call and ignores its late response', async () => {
   let resolve!: (r: Response) => void;
   const pending = new Promise<Response>(r => { resolve = r; });

@@ -1,10 +1,12 @@
-# Sort of Magic — Phase 4
+# Sort of Magic
 
-A CSV cleanup app built with Next.js, React, TypeScript, AG Grid Community, and Papa Parse. Phases 1–4 are implemented. The app supports editable data, undo history, local cleanup, and Meta-assisted category normalization. The workspace puts suggested fixes first, with optional tools below and the spreadsheet alongside. Hosting and demo preparation remain Phase 5 in [PROJECT_BRIEF.md](../PROJECT_BRIEF.md).
+A CSV cleanup app built with Next.js, React, TypeScript, AG Grid Community, and Papa Parse. The app supports editable data, undo history, local cleanup, and Meta-assisted category normalization. The workspace puts suggested fixes first, with optional tools below and the spreadsheet alongside.
+
+Public app: **https://sortofmagic.vercel.app**. Hosting is configured on Vercel; demo recording and hackathon submission materials remain in Phase 5 of the workspace's `PROJECT_BRIEF.md`.
 
 ## Run
 
-Requires Node.js 22.12+ and npm. `.nvmrc` selects Node 22 if you use nvm (`nvm use`). An older system Node can run the app but fail the test toolchain; check `node --version` before running commands.
+Requires Node.js 22.12+ within the Node 22 release line and npm. `.nvmrc` and `package.json` select Node 22 for local use and hosting. An older system Node can run the app but fail the test toolchain; check `node --version` before running commands.
 
 ```sh
 cd sort-of-magic
@@ -39,7 +41,7 @@ The demo contains synthetic data, including leading-zero IDs, Unicode, embedded 
 - Export defaults to prefixing formula-like headers/cells with an apostrophe. This changes downloaded text only and includes negative numbers. The UI shows the count and lets you opt out to preserve exact values.
 - The working file stays in browser memory. Clicking Analyze sends only the selected column name, distinct nonempty values, counts, and optional cleanup guidance through the server to the configured provider. Refreshing loses the session.
 - Repairs and export include the entire file, even when filters hide rows. Export preserves source order. A pending preview triggers a confirmation before exporting without it. An unchanged session uses an `-export.csv` suffix; a session with applied changes uses `-repaired.csv`.
-- No deployment, XLSX/formulas, currency conversion, persistent storage, or custom visual redesign in this phase.
+- No XLSX/formulas, currency conversion, accounts, or persistent file storage.
 
 ## Phase 3 tools
 
@@ -69,7 +71,7 @@ npm run typecheck
 npm run build
 ```
 
-99 tests pass across CSV parsing, import/header handling, date and numeric conventions, key duplicates, missing/empty values, mixed-operation undo, stale previews, AI validation, and component behavior. Type checking and the production build pass. Browser checks verified sorted/filtered cell editing, undoing manual and batch edits, explicit date resolution, currency-preserving number previews, choosing a retained key duplicate, corrected-header import, and a real Meta guidance → preview → apply → undo flow. A 5,000-row file was loaded, filtered, edited, and exported; the downloaded file retained every row in source order and only the intended edit.
+102 tests pass across CSV parsing, import/header handling, date and numeric conventions, key duplicates, missing/empty values, mixed-operation undo, stale previews, AI validation, hosting rate-limit errors, and component behavior. Type checking and the production build pass. Browser checks verified sorted/filtered cell editing, undoing manual and batch edits, explicit date resolution, currency-preserving number previews, choosing a retained key duplicate, corrected-header import, and a real Meta guidance → preview → apply → undo flow. A 5,000-row file was loaded, filtered, edited, and exported; the downloaded file retained every row in source order and only the intended edit.
 
 ## Code map
 
@@ -116,11 +118,33 @@ Dataset changes clear pending suggestions and abort active analysis. Selecting d
 - Core, server-route, provider-adapter, and component tests use explicit test-only provider mocks. There is no fake-AI mode in the application.
 - Verified browser behavior: configuration-needed message, analysis error/retry, unchanged dataset on failure, and continued access to local repair previews.
 - Successful live inference was verified on November 2, 2026: Muse Spark 1.3 returned validated mappings from `U.S.` and `United States` to `USA`. Phase 3 also verified a live guided repair through the browser: USA/U.S. → United States and UK → United Kingdom, followed by apply and undo.
-- The server still binds to loopback. Authentication and durable rate limiting for public hosting belong to Phase 5.
+- The local development server binds to loopback. The public deployment uses Vercel's firewall rate limit described below.
 
 Additional code: `components/ai-repairs-panel.tsx`, `lib/ai-repairs.ts`, `lib/schemas.ts`, `lib/ai/meta.ts`, and `app/api/repairs/route.ts`.
 
-Next milestone: Phase 4 visual design and usability improvements.
+## Deployment
+
+The Vercel project is `sortofmagic` in `almazbisenbaevs-projects`, connected to the `main` branch of `almazbisenbaev/sort-of-magic`. The repository root is the application directory. Pushes to `main` deploy automatically.
+
+Production environment variables are `META_API_KEY` (Sensitive), `META_MODEL`, and `META_API_BASE_URL`. They are server-only; the local `.env.local` is excluded from Git and CLI uploads. Preview deployments intentionally have no Meta credentials. After changing production variables, redeploy for them to take effect.
+
+The AI route has a 60-second hosting limit, allowing its 45-second provider timeout to return a readable error. Requests remain capped at 32 KB, responses at 128 KB, and generation at 4,096 completion tokens.
+
+Vercel Firewall limits `POST /api/repairs*` to **5 requests per 60-second fixed window per IP**, returning HTTP 429. The deployed rule is recorded in [deployment/firewall.json](deployment/firewall.json). This JSON is a reference for the Vercel Firewall API, not an automatically applied `vercel.json` setting. Preserve other existing firewall rules when making future edits. The rule uses the Hobby plan's included rate-limit rule, without another service or database.
+
+The limit applies at Vercel's edge and counts separately by region. It reduces bursts; it is **not a global daily quota or a hard spending cap**. People sharing an IP share its allowance. Manage limits in the [project firewall](https://vercel.com/almazbisenbaevs-projects/sortofmagic/firewall). To stop AI spending immediately, change this rule's action to Deny; the browser's local cleanup and CSV export remain available.
+
+Manual deployment, if needed:
+
+```sh
+vercel link --project sortofmagic --scope almazbisenbaevs-projects
+npm test
+npm run typecheck
+npm run build
+vercel --prod
+```
+
+Before sharing a fresh deployment, verify the sample CSV, a real AI suggestion, preview/apply/undo, and CSV download. Test the firewall with invalid `{}` JSON requests so the check does not consume Meta credits. See [Vercel's rate-limit documentation](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting) for scope and current plan limits.
 
 ## Repair workspace
 

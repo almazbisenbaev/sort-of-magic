@@ -8,7 +8,7 @@ export class AiError extends Error {
 export function getMetaConfig() {
   const key = process.env.META_API_KEY?.trim();
   const model = process.env.META_MODEL?.trim();
-  if (!key || !model) throw new AiError('Meta is not connected. Add META_API_KEY and META_MODEL to .env.local, then restart the app. Local cleanup still works.', 503);
+  if (!key || !model) throw new AiError('AI suggestions are currently unavailable. You can still use all other cleanup tools.', 503);
   let base: URL;
   try { base = new URL(process.env.META_API_BASE_URL?.trim() || 'https://api.meta.ai/v1'); }
   catch { throw new AiError('META_API_BASE_URL is invalid. Check the server configuration.', 503); }

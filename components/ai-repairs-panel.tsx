@@ -32,7 +32,10 @@ export default function AiRepairsPanel({ data, disabled, onPreview }: { data: Da
     setLoading(true); setError(''); setResult(null); setSelected([]); onPreview(null);
     try {
       const response = await fetch('/api/repairs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(contextState.context), signal: request.signal });
-      const body = await response.json();
+      // Hosting rate limits can return HTML or plain text before our route runs.
+      const body = await response.json().catch(() => null);
+      if (response.status === 429) throw new Error(body?.error || 'Too many AI requests. Wait a minute, then try again. Your spreadsheet is unchanged.');
+      if (!body) throw new Error('AI analysis is temporarily unavailable. Nothing changed; please try again.');
       if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'AI analysis failed. Please retry.');
       const parsed = AiResponseSchema.parse(body);
       const suggestions = validateSuggestions(parsed.suggestions, contextState.context);
@@ -57,8 +60,8 @@ export default function AiRepairsPanel({ data, disabled, onPreview }: { data: Da
   return <section aria-label="Meta AI category repair">
     <h2>Normalize categories with Meta AI</h2>
     <p>Choose a column such as country or product category. Meta proposes equivalent labels; you review every change.</p>
-    {configured === false && <p className="notice">Meta is not connected yet. Add your key and model to <code>.env.local</code>, then restart the app. Local cleanup is still available.</p>}
-    {configured === true && <p className="notice">Server credentials are configured. Access is verified when you analyze a column.</p>}
+    {configured === false && <p className="notice">AI suggestions are currently unavailable. You can still use all other cleanup tools.</p>}
+    {configured === true && <p className="notice">Meta AI is connected. You choose which suggestions to apply.</p>}
     <label>Category column{' '}<select aria-label="Category column" value={columnId} disabled={loading || disabled} onChange={e => { setColumnId(e.target.value); setResult(null); setSelected([]); setError(''); onPreview(null); }}>{data.columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
     <p><label>Optional cleanup guidance<br /><textarea aria-label="Optional cleanup guidance" maxLength={1000} rows={2} value={guidance} disabled={loading || disabled} placeholder="For example: keep different product types separate." onChange={e => { setGuidance(e.target.value); setResult(null); setSelected([]); setError(''); onPreview(null); }} /></label></p>
     <p className="notice">Clicking Analyze sends only this column’s name, distinct nonempty values, their counts, and your optional guidance through the server to the configured Meta provider. Other columns and the filename are not sent. Blank values are excluded.</p>

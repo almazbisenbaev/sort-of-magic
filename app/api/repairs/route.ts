@@ -1,6 +1,8 @@
 import { AI_LIMITS, RepairContextSchema } from '@/lib/schemas';
 import { AiError, getMetaConfig, proposeRepairs, readLimited } from '@/lib/ai/meta';
 export const runtime = 'nodejs';
+// Leave time for the provider's 45-second timeout to return a readable error.
+export const maxDuration = 60;
 const headers = { 'Cache-Control': 'no-store' };
 export async function GET() {
   try { const { model } = getMetaConfig(); return Response.json({ configured: true, model }, { headers }); }
