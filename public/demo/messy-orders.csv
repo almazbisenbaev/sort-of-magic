@@ -1,0 +1,9 @@
+order_id,customer,country,category,total,notes
+0001, Alice ,USA, Home ,29.90,"Leave at door, please"
+0002,Bob,United States,Kitchen,45.00,
+0002,Bob,United States,Kitchen,45.00,
+0003,Әлия,Kazakhstan,Office,12.50,"First line
+Second line"
+0004, Chen, U.S. ,Home,19.00,"Gift: ""Thank you"""
+0005,Dina,Kazakhstan,Office ,8.00,
+0005,Dina,Kazakhstan,Office ,8.00,
