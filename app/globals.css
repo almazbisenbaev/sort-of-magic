@@ -53,8 +53,6 @@ code { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 .stepper button:not(:disabled):hover .step-number { box-shadow: 0 0 0 4px #e8e1f2; }
 .wizard-content { width: min(100%, 800px); margin: 0 auto; }
 .stage-heading { margin-bottom: 20px; }
-.eyebrow { color: var(--accent); font: 650 11px/1.5 ui-monospace, monospace; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 6px; }
-.eyebrow span { color: #92849f; padding: 0 1px; }
 .stage-heading h1 { font-size: clamp(32px, 4.2vw, 46px); line-height: 1.12; font-weight: 600; letter-spacing: -.035em; text-wrap: balance; }
 .stage-heading > p:last-child { color: var(--muted); font-size: 15px; margin: 8px 0 0; }
 .feedback:not(:empty) { font-size: 13px; color: #395b4c; padding: 11px 14px; border-radius: 7px; background: #edf5f0; margin-bottom: 16px; }

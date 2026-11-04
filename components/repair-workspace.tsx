@@ -200,7 +200,7 @@ export default function RepairWorkspace() {
       <button aria-current={step === index ? 'step' : undefined} disabled={navigationLocked || !!draft || !!workbook || index > furthestStep || (index > 0 && !data)} onClick={() => goTo(index as Step)}><span className="step-number" aria-hidden="true">{index < step ? '✓' : index + 1}</span><span>{label}</span></button>
     </li>)}</ol></nav>
     <main className="wizard-content">
-      <header key={title} className="stage-heading"><p className="eyebrow">Step {String(step + 1).padStart(2, '0')} <span>/</span> 04</p><h1 tabIndex={-1} ref={heading}>{title}</h1><p>{subtitle}</p></header>
+      <header key={title} className="stage-heading"><h1 tabIndex={-1} ref={heading}>{title}</h1><p>{subtitle}</p></header>
       <div className="feedback" role="status" aria-live="polite">{(busy || exporting) && <WaitingCat />}{exporting ? 'Preparing your download…' : busy ? 'Reading your file…' : state.message}</div>
       {state.error && <p role="alert" className="error">{state.error}</p>}
       {step === 0 && (draft ? <ImportPreview key={draft.name + draft.records.length} draft={draft} onCancel={cancelImport} onImport={loadData} /> : workbook ? <SheetPicker name={workbook.name} sheets={workbook.sheets} busy={busy} onSelect={chooseSheet} onCancel={cancelImport} /> : <section className="upload-stage" aria-label="Choose your file">
